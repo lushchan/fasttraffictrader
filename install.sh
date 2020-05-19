@@ -1,8 +1,11 @@
 #!/bin/bash -e
+#logging
+##timestampformat
 tstamp=$(date +%m/%d/%Y-%H:%M:%S)
-###inputfile
+##credentials
+creds=./creds.txt
+#inputfile
 ifile=./f33x.txt
-
 if [[ -z $1 ]]; then
 	echo ""
 	echo "Error: input parameter expected."
@@ -15,8 +18,7 @@ if [[ -z $1 ]]; then
 fi
 
 if [ '-s' = "$1" ] && [[ -z $2 ]]; then 
-	echo "Rerun and input user of shared database 
-	-s shareduser - for shared. Example bash f33x.sh -s nameofshareduser"
+	echo "fail"
 	exit
 fi
 
@@ -36,16 +38,15 @@ do
         f3dbn=f3`echo $domain | cut -d / -f 4| sed -e 's/-/_/g'|sed 's|\.||g'`
         f3dbu=f3u`echo $domain | cut -d / -f 4|cut -c 1-13 | sed 's|-|_|g'|sed 's|\.||g'`
         f3psw=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c 13`
-	credentials=./credentials
 ###some checks before destruction
 	if [[ -z $docroot ]]; then
 		echo "Can't find domain"
 		exit
 	else
 ###create dirs and download
-	mkdir -m 777 $f33xroot
-	cp -R ftt2 $f33xroot
+	cp -Rp ftt2 $f33xroot
 	chmod -R 755 $f33xroot
+	chmod 777 $f33xroot
 	chown -R apache:apache $f33xroot
 
 ###local
@@ -55,7 +56,7 @@ if [ '-l' = "$1" ]; then
 	mysql -e "CREATE USER ${f3dbu}@localhost  IDENTIFIED BY '${f3psw}'"
 	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${f3dbu}'@'localhost';"
 	mysql -e "FLUSH PRIVILEGES;"
-	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbHost: localhost \n dbName $f3dbn \n dbUser: $f3dbu \n dbPassword: $f3psw \n " | tee -a $credentials
+	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbHost: localhost \n dbName $f3dbn \n dbUser: $f3dbu \n dbPassword: $f3psw \n " | tee -a $creds
 fi
 
 ###shared
@@ -64,7 +65,7 @@ if [ '-s' = "$1" ]; then
 	mysql -e "CREATE DATABASE ${f3dbn} /*\!40100 DEFAULT CHARACTER SET utf8 */;"
 	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${2}'@'localhost';"
 	mysql -e "FLUSH PRIVILEGES;"
-	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbName $f3dbn \n dbUser of shared database: '$2'@'localhost' \n" | tee -a $credentials
+	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbName $f3dbn \n dbUser of shared database: '$2'@'localhost' \n" | tee -a $creds
 fi
 fi
 done
