@@ -1,5 +1,5 @@
 #!/bin/bash -e
-
+tstamp=$(date +%m/%d/%Y-%H:%M:%S)
 ###inputfile
 ifile=./f33x.txt
 
@@ -8,9 +8,15 @@ if [[ -z $1 ]]; then
 	echo "Error: input parameter expected."
 	echo ""
 	echo "Usage:
-	-l - for local install
-	-s - for shared"
+	-l - for local install. Example bash f33x.sh -l
+	-s shareduser - for shared. Example bash f33x.sh -s nameofshareduser"
 	echo ""
+	exit
+fi
+
+if [ '-s' = "$1" ] && [[ -z $2 ]]; then 
+	echo "Rerun and input user of shared database 
+	-s shareduser - for shared. Example bash f33x.sh -s nameofshareduser"
 	exit
 fi
 
@@ -18,6 +24,9 @@ if [[ ! -s $ifile ]]; then
 	echo "Input file $ifile is empty. Fill it with domains"
 	exit
 else
+
+wget http://www.ftt2.com/latest/ftt2.zip
+unzip ftt2.zip
 
 cat $ifile | while read domain
 
@@ -35,36 +44,32 @@ do
 	else
 ###create dirs and download
 	mkdir -m 777 $f33xroot
-	wget -O $f33xroot/ftt2.zip http://www.ftt2.com/latest/ftt2.zip
-	unzip -qq $f33xroot/ftt2.zip -d $f33xroot
-	cp -Rp $f33xroot/ftt2/* $f33xroot/
-	rm -rf $f33xroot/ftt2
+	cp -R ftt2 $f33xroot
 	chmod -R 755 $f33xroot
 	chown -R apache:apache $f33xroot
-	rm $f33xroot/ftt2.zip
 
 ###local
 if [ '-l' = "$1" ]; then
-
 	echo "local install"
 	mysql -e "CREATE DATABASE ${f3dbn} /*\!40100 DEFAULT CHARACTER SET utf8 */;"
-	mysql -e "CREATE USER ${f3dbu}@localhost"
-	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${f3dbu}'@'localhost' IDENTIFIED BY '${f3psw}';"
+	mysql -e "CREATE USER ${f3dbu}@localhost  IDENTIFIED BY '${f3psw}'"
+	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${f3dbu}'@'localhost';"
 	mysql -e "FLUSH PRIVILEGES;"
-	echo -e "go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbHost: localhost \n dbName $f3dbn \n dbUser: $f3dbu \n dbPassword: $f3psw \n " | tee -a $credentials
+	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbHost: localhost \n dbName $f3dbn \n dbUser: $f3dbu \n dbPassword: $f3psw \n " | tee -a $credentials
 fi
 
 ###shared
-if [ '-s' = "$1" ]; then 
+if [ '-s' = "$1" ]; then
 	echo "shared install"
-	read -p "enter a user name of shared database(without @localhost) " f3shared
 	mysql -e "CREATE DATABASE ${f3dbn} /*\!40100 DEFAULT CHARACTER SET utf8 */;"
-	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${f3shared}'@'localhost';"
+	mysql -e "GRANT ALL PRIVILEGES ON ${f3dbn}.* TO '${2}'@'localhost';"
 	mysql -e "FLUSH PRIVILEGES;"
-	echo -e "go to the next URL to finish installation http://$domain/f33x/install"
-	echo "Use the following credentials \n dbName $f3dbn \n dbUser of shared database: $f3shared \n" | tee -a $credentials
+	echo -e "[$tstamp] \n go to the next URL to finish installation http://$domain/f33x/install \n Use the following credentials: \n dbName $f3dbn \n dbUser of shared database: '$2'@'localhost' \n" | tee -a $credentials
 fi
-	fi
+fi
 done
 fi
 cat /dev/null > $ifile
+rm ftt2.zip
+rm -rf ./ftt2
+exit
